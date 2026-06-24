@@ -1,19 +1,19 @@
 # Benchmark Report: Single-Agent vs Multi-Agent
 
-**Date:** 2026-06-24 11:36  
+**Date:** 2026-06-24 11:55  
 **Query:** Research GraphRAG state-of-the-art and write a 500-word summary  
 
 ## Results
 
 | Run | Latency (s) | Cost (USD) | Quality /10 | Notes |
 |---|---:|---:|---:|---|
-| single-agent | 13.53 | — | 5.0 | 0in/0out tokens |
-| multi-agent | 33.34 | $0.00132 | 7.9 | 2209in/1654out tokens |
+| single-agent | 12.57 | — | 5.0 | 0in/0out tokens |
+| multi-agent | 41.41 | $0.00135 | 8.9 | 2223in/1686out tokens |
 
 ## Comparison
 
-- **Latency:** `multi-agent` is 2.5× slower
-- **Quality:** `multi-agent` scores 2.9 pts higher
+- **Latency:** `multi-agent` is 3.3× slower
+- **Quality:** `multi-agent` scores 3.9 pts higher
 
 ## Failure Modes & Fixes
 
