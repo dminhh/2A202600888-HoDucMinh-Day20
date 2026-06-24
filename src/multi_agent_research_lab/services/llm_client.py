@@ -3,9 +3,16 @@
 Production note: agents should depend on this interface instead of importing an SDK directly.
 """
 
+import logging
 from dataclasses import dataclass
 
-from multi_agent_research_lab.core.errors import StudentTodoError
+from openai import OpenAI
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+from multi_agent_research_lab.core.config import get_settings
+from multi_agent_research_lab.core.errors import AgentExecutionError
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -17,13 +24,36 @@ class LLMResponse:
 
 
 class LLMClient:
-    """Provider-agnostic LLM client skeleton."""
+    """Provider-agnostic LLM client backed by OpenAI."""
 
+    def __init__(self) -> None:
+        settings = get_settings()
+        if not settings.openai_api_key:
+            raise AgentExecutionError("OPENAI_API_KEY is not set in .env")
+        self._client = OpenAI(api_key=settings.openai_api_key)
+        self._model = settings.openai_model
+        self._timeout = settings.timeout_seconds
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def complete(self, system_prompt: str, user_prompt: str) -> LLMResponse:
-        """Return a model completion.
+        """Return a model completion with retry on transient errors."""
 
-        TODO(student): Connect OpenAI, Azure OpenAI, or another provider.
-        Keep retry, timeout, and token logging here rather than inside agents.
-        """
-
-        raise StudentTodoError("TODO(student): implement LLMClient.complete")
+        logger.debug("LLM request | model=%s", self._model)
+        response = self._client.chat.completions.create(
+            model=self._model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            timeout=self._timeout,
+        )
+        choice = response.choices[0].message.content or ""
+        usage = response.usage
+        input_tokens = usage.prompt_tokens if usage else None
+        output_tokens = usage.completion_tokens if usage else None
+        logger.debug("LLM response | in=%s out=%s tokens", input_tokens, output_tokens)
+        return LLMResponse(
+            content=choice,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
